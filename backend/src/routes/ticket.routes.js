@@ -1,4 +1,5 @@
 import express from 'express';
+import Ticket from '../models/ticket.model.js';
 import {
   createTicket,
   getTicketById,
@@ -42,10 +43,10 @@ router.get('/:id', async (req, res, next) => {
     ) {
       next();
     } else {
-      res.status(403).json({ message: 'Unauthorized' });
+      return res.status(403).json({ message: 'Unauthorized' });
     }
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    return res.status(500).json({ message: 'Server error', error: error.message });
   }
 }, getTicketById);
 
