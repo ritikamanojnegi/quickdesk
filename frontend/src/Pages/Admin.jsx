@@ -123,7 +123,7 @@ const AdminDashboard = () => {
           >
             <option value="">All Categories</option>
             {categories.map(category => (
-              <option key={category} value={category}>{category}</option>
+              <option key={category._id} value={category._id}>{category.name}</option>
             ))}
           </select>
         </div>
@@ -163,20 +163,20 @@ const AdminDashboard = () => {
           </thead>
           <tbody>
             {tickets.map(ticket => (
-              <tr key={ticket.id}>
-                <td>#{ticket.id}</td>
+              <tr key={ticket._id}>
+                <td>#{ticket._id}</td>
                 <td>{ticket.subject}</td>
-                <td>{ticket.category}</td>
+                <td>{ticket.category.name}</td>
                 <td>
                   <span className={`ticket-status ${getStatusClass(ticket.status)}`}>
                     {ticket.status}
                   </span>
                 </td>
-                <td>User #{ticket.createdBy}</td>
-                <td>{ticket.assignedTo ? `Agent #${ticket.assignedTo}` : 'Unassigned'}</td>
+                <td>User #{ticket.createdBy._id}</td>
+                <td>{ticket.assignedTo ? `Agent #${ticket.assignedTo._id}` : 'Unassigned'}</td>
                 <td>{formatDate(ticket.createdAt)}</td>
                 <td>
-                  <Link to={`/tickets/${ticket.id}`} className="btn-primary">
+                  <Link to={`/tickets/${ticket._id}`} className="btn-primary">
                     View
                   </Link>
                 </td>
