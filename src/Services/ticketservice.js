@@ -1,390 +1,174 @@
-// Mock ticket service with local storage persistence
+// Real API service
+const API_URL = 'http://localhost:5000/api';
 
-// Initial mock data
-let mockTickets = [
-  {
-    id: 1,
-    subject: 'Cannot access email',
-    description: 'I am unable to log into my email account since yesterday.',
-    category: 'Email',
-    status: 'Open',
-    priority: 'High',
-    createdBy: 3, // Regular user ID
-    assignedTo: null,
-    createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-    updatedAt: new Date(Date.now() - 86400000).toISOString(),
-    comments: [],
-    votes: { up: 0, down: 0 },
-    attachments: []
-  },
-  {
-    id: 2,
-    subject: 'Need software installation',
-    description: 'Please install Adobe Photoshop on my workstation.',
-    category: 'Software',
-    status: 'In Progress',
-    priority: 'Medium',
-    createdBy: 3, // Regular user ID
-    assignedTo: 2, // Agent ID
-    createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-    updatedAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-    comments: [
-      {
-        id: 1,
-        ticketId: 2,
-        userId: 2,
-        content: 'I will check the license availability and get back to you.',
-        createdAt: new Date(Date.now() - 86400000).toISOString() // 1 day ago
-      }
-    ],
-    votes: { up: 2, down: 0 },
-    attachments: []
-  },
-  {
-    id: 3,
-    subject: 'Printer not working',
-    description: 'The printer on the 2nd floor is showing error code E502.',
-    category: 'Hardware',
-    status: 'Resolved',
-    priority: 'Low',
-    createdBy: 3, // Regular user ID
-    assignedTo: 2, // Agent ID
-    createdAt: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
-    updatedAt: new Date(Date.now() - 43200000).toISOString(), // 12 hours ago
-    comments: [
-      {
-        id: 2,
-        ticketId: 3,
-        userId: 2,
-        content: 'I will check the printer today.',
-        createdAt: new Date(Date.now() - 172800000).toISOString() // 2 days ago
-      },
-      {
-        id: 3,
-        ticketId: 3,
-        userId: 2,
-        content: 'The printer has been fixed. It needed a toner replacement.',
-        createdAt: new Date(Date.now() - 43200000).toISOString() // 12 hours ago
-      }
-    ],
-    votes: { up: 1, down: 0 },
-    attachments: []
-  }
-];
-
-// Categories
-const categories = [
-  'Email',
-  'Hardware',
-  'Software',
-  'Network',
-  'Account Access',
-  'Other'
-];
-
-// Load tickets from localStorage if available
-const loadTickets = () => {
-  const storedTickets = localStorage.getItem('tickets');
-  if (storedTickets) {
-    mockTickets = JSON.parse(storedTickets);
-  } else {
-    // Initialize with mock data
-    saveTickets();
-  }
-  return mockTickets;
+// Helper function to get auth token
+const getAuthHeader = () => {
+  const user = JSON.parse(localStorage.getItem('user'));
+  return { 'Authorization': `Bearer ${user.token}` };
 };
 
-// Save tickets to localStorage
-const saveTickets = () => {
-  localStorage.setItem('tickets', JSON.stringify(mockTickets));
+// Helper function to build query string from filters
+const buildQueryString = (filters) => {
+  if (!filters) return '';
+  
+  const params = new URLSearchParams();
+  
+  if (filters.status) params.append('status', filters.status);
+  if (filters.category) params.append('category', filters.category);
+  if (filters.search) params.append('search', filters.search);
+  if (filters.sort) params.append('sort', filters.sort);
+  
+  return params.toString() ? `?${params.toString()}` : '';
 };
-
-// Simulate network delay
-const delay = (ms = 500) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Initialize tickets
-loadTickets();
 
 export const ticketService = {
   // Get all ticket categories
   async getCategories() {
-    await delay();
-    return categories;
+    const response = await fetch(`${API_URL}/categories`);
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to get categories');
+    }
+    
+    return response.json();
   },
 
   // Create a new ticket
   async createTicket(ticketData) {
-    await delay();
+    const response = await fetch(`${API_URL}/tickets`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader()
+      },
+      body: JSON.stringify(ticketData)
+    });
     
-    const newTicket = {
-      id: mockTickets.length > 0 ? Math.max(...mockTickets.map(t => t.id)) + 1 : 1,
-      subject: ticketData.subject,
-      description: ticketData.description,
-      category: ticketData.category,
-      status: 'Open',
-      priority: ticketData.priority || 'Medium',
-      createdBy: ticketData.userId,
-      assignedTo: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      comments: [],
-      votes: { up: 0, down: 0 },
-      attachments: ticketData.attachments || []
-    };
-
-    mockTickets.push(newTicket);
-    saveTickets();
-    return newTicket;
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to create ticket');
+    }
+    
+    return response.json();
   },
 
   // Get a specific ticket by ID
   async getTicket(id) {
-    await delay();
-    const ticket = mockTickets.find(t => t.id === parseInt(id));
-    if (!ticket) throw new Error('Ticket not found');
-    return ticket;
+    const response = await fetch(`${API_URL}/tickets/${id}`, {
+      headers: getAuthHeader()
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to get ticket');
+    }
+    
+    return response.json();
   },
 
   // Get tickets for a specific user
-  async getUserTickets(userId, filters = {}) {
-    await delay();
-    loadTickets(); // Refresh from storage
+  async getUserTickets(filters = {}) {
+    const queryString = buildQueryString(filters);
     
-    let filteredTickets = mockTickets.filter(t => t.createdBy === parseInt(userId));
+    const response = await fetch(`${API_URL}/tickets/me${queryString}`, {
+      headers: getAuthHeader()
+    });
     
-    // Apply filters
-    if (filters.status) {
-      filteredTickets = filteredTickets.filter(t => t.status === filters.status);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to get user tickets');
     }
     
-    if (filters.category) {
-      filteredTickets = filteredTickets.filter(t => t.category === filters.category);
-    }
-    
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      filteredTickets = filteredTickets.filter(t => 
-        t.subject.toLowerCase().includes(searchLower) || 
-        t.description.toLowerCase().includes(searchLower)
-      );
-    }
-    
-    // Sort tickets
-    if (filters.sort) {
-      switch(filters.sort) {
-        case 'newest':
-          filteredTickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          break;
-        case 'oldest':
-          filteredTickets.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-          break;
-        case 'updated':
-          filteredTickets.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-          break;
-        case 'mostVoted':
-          filteredTickets.sort((a, b) => (b.votes.up - b.votes.down) - (a.votes.up - a.votes.down));
-          break;
-        case 'mostCommented':
-          filteredTickets.sort((a, b) => b.comments.length - a.comments.length);
-          break;
-        default:
-          break;
-      }
-    }
-    
-    return filteredTickets;
+    return response.json();
   },
 
-  // Get tickets for agents (all tickets or assigned to specific agent)
-  async getAgentTickets(agentId = null, filters = {}) {
-    await delay();
-    loadTickets(); // Refresh from storage
+  // Get tickets for agents
+  async getAgentTickets(filters = {}) {
+    const queryString = buildQueryString(filters);
     
-    let filteredTickets = mockTickets;
+    const response = await fetch(`${API_URL}/tickets/agent${queryString}`, {
+      headers: getAuthHeader()
+    });
     
-    // If agentId is provided, filter by assigned tickets
-    if (agentId) {
-      filteredTickets = filteredTickets.filter(t => t.assignedTo === parseInt(agentId));
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to get agent tickets');
     }
     
-    // Apply filters (same as getUserTickets)
-    if (filters.status) {
-      filteredTickets = filteredTickets.filter(t => t.status === filters.status);
-    }
-    
-    if (filters.category) {
-      filteredTickets = filteredTickets.filter(t => t.category === filters.category);
-    }
-    
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      filteredTickets = filteredTickets.filter(t => 
-        t.subject.toLowerCase().includes(searchLower) || 
-        t.description.toLowerCase().includes(searchLower)
-      );
-    }
-    
-    // Sort tickets (same as getUserTickets)
-    if (filters.sort) {
-      switch(filters.sort) {
-        case 'newest':
-          filteredTickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          break;
-        case 'oldest':
-          filteredTickets.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-          break;
-        case 'updated':
-          filteredTickets.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-          break;
-        case 'mostVoted':
-          filteredTickets.sort((a, b) => (b.votes.up - b.votes.down) - (a.votes.up - a.votes.down));
-          break;
-        case 'mostCommented':
-          filteredTickets.sort((a, b) => b.comments.length - a.comments.length);
-          break;
-        default:
-          break;
-      }
-    }
-    
-    return filteredTickets;
-  },
-
-  // Update ticket details
-  async updateTicket(id, updateData) {
-    await delay();
-    loadTickets(); // Refresh from storage
-    
-    const ticketIndex = mockTickets.findIndex(t => t.id === parseInt(id));
-    if (ticketIndex === -1) throw new Error('Ticket not found');
-    
-    const updatedTicket = {
-      ...mockTickets[ticketIndex],
-      ...updateData,
-      updatedAt: new Date().toISOString()
-    };
-    
-    mockTickets[ticketIndex] = updatedTicket;
-    saveTickets();
-    return updatedTicket;
+    return response.json();
   },
 
   // Update ticket status
-  async updateTicketStatus(id, status, agentId = null) {
-    await delay();
-    loadTickets(); // Refresh from storage
+  async updateTicketStatus(id, status) {
+    const response = await fetch(`${API_URL}/tickets/${id}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader()
+      },
+      body: JSON.stringify({ status })
+    });
     
-    const ticketIndex = mockTickets.findIndex(t => t.id === parseInt(id));
-    if (ticketIndex === -1) throw new Error('Ticket not found');
-    
-    const updatedTicket = {
-      ...mockTickets[ticketIndex],
-      status,
-      updatedAt: new Date().toISOString()
-    };
-    
-    // If agent is assigning themselves
-    if (agentId && !mockTickets[ticketIndex].assignedTo) {
-      updatedTicket.assignedTo = parseInt(agentId);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to update ticket status');
     }
     
-    mockTickets[ticketIndex] = updatedTicket;
-    saveTickets();
-    return updatedTicket;
+    return response.json();
   },
 
   // Add comment to a ticket
-  async addComment(ticketId, commentData) {
-    await delay();
-    loadTickets(); // Refresh from storage
+  async addComment(ticketId, content) {
+    const response = await fetch(`${API_URL}/tickets/${ticketId}/comments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader()
+      },
+      body: JSON.stringify({ content })
+    });
     
-    const ticketIndex = mockTickets.findIndex(t => t.id === parseInt(ticketId));
-    if (ticketIndex === -1) throw new Error('Ticket not found');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to add comment');
+    }
     
-    const newComment = {
-      id: mockTickets[ticketIndex].comments.length > 0 
-        ? Math.max(...mockTickets[ticketIndex].comments.map(c => c.id)) + 1 
-        : 1,
-      ticketId: parseInt(ticketId),
-      userId: commentData.userId,
-      content: commentData.content,
-      createdAt: new Date().toISOString()
-    };
-    
-    mockTickets[ticketIndex].comments.push(newComment);
-    mockTickets[ticketIndex].updatedAt = new Date().toISOString();
-    saveTickets();
-    
-    return newComment;
+    return response.json();
   },
   
   // Vote on a ticket
-  async voteTicket(ticketId, voteType, userId) {
-    await delay();
-    loadTickets(); // Refresh from storage
+  async voteTicket(ticketId, voteType) {
+    const response = await fetch(`${API_URL}/tickets/${ticketId}/vote`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader()
+      },
+      body: JSON.stringify({ voteType })
+    });
     
-    const ticketIndex = mockTickets.findIndex(t => t.id === parseInt(ticketId));
-    if (ticketIndex === -1) throw new Error('Ticket not found');
-    
-    // In a real app, we would track which users have voted
-    // For this mock, we'll just increment the count
-    if (voteType === 'up') {
-      mockTickets[ticketIndex].votes.up += 1;
-    } else if (voteType === 'down') {
-      mockTickets[ticketIndex].votes.down += 1;
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to vote on ticket');
     }
     
-    saveTickets();
-    return mockTickets[ticketIndex];
+    return response.json();
   },
   
   // Get all tickets (admin only)
   async getAllTickets(filters = {}) {
-    await delay();
-    loadTickets(); // Refresh from storage
+    const queryString = buildQueryString(filters);
     
-    let filteredTickets = [...mockTickets];
+    const response = await fetch(`${API_URL}/tickets/all${queryString}`, {
+      headers: getAuthHeader()
+    });
     
-    // Apply filters (same as other methods)
-    if (filters.status) {
-      filteredTickets = filteredTickets.filter(t => t.status === filters.status);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to get all tickets');
     }
     
-    if (filters.category) {
-      filteredTickets = filteredTickets.filter(t => t.category === filters.category);
-    }
-    
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      filteredTickets = filteredTickets.filter(t => 
-        t.subject.toLowerCase().includes(searchLower) || 
-        t.description.toLowerCase().includes(searchLower)
-      );
-    }
-    
-    // Sort tickets (same as other methods)
-    if (filters.sort) {
-      switch(filters.sort) {
-        case 'newest':
-          filteredTickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          break;
-        case 'oldest':
-          filteredTickets.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-          break;
-        case 'updated':
-          filteredTickets.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-          break;
-        case 'mostVoted':
-          filteredTickets.sort((a, b) => (b.votes.up - b.votes.down) - (a.votes.up - a.votes.down));
-          break;
-        case 'mostCommented':
-          filteredTickets.sort((a, b) => b.comments.length - a.comments.length);
-          break;
-        default:
-          break;
-      }
-    }
-    
-    return filteredTickets;
+    return response.json();
   }
 };

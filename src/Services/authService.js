@@ -1,128 +1,94 @@
 // src/services/authService.js
-// Mock user database
-const mockUsers = [
-  {
-    id: '1',
-    name: 'Test User',
-    email: 'user@example.com',
-    password: 'user123',
-    role: 'user',
-    createdAt: new Date('2023-01-15').toISOString()
-  },
-  {
-    id: '2',
-    name: 'Test Agent',
-    email: 'agent@example.com',
-    password: 'agent123',
-    role: 'agent',
-    createdAt: new Date('2023-01-10').toISOString()
-  },
-  {
-    id: '3',
-    name: 'Admin User',
-    email: 'admin@example.com',
-    password: 'admin123',
-    role: 'admin',
-    createdAt: new Date('2023-01-01').toISOString()
-  }
-];
-
-// Simulate network delay
-const simulateNetworkDelay = () => new Promise(resolve => setTimeout(resolve, 500));
+// Real API service
+const API_URL = 'http://localhost:5000/api';
 
 export const authService = {
   async login(email, password) {
-    await simulateNetworkDelay();
+    const response = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email, password })
+    });
     
-    const user = mockUsers.find(
-      user => user.email === email && user.password === password
-    );
-    
-    if (!user) {
-      throw new Error('Invalid email or password');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Invalid email or password');
     }
     
-    // Return user data without password
-    const { password: _, ...userData } = user;
-    return userData;
+    return response.json();
   },
   
   async register(userData) {
-    await simulateNetworkDelay();
+    const response = await fetch(`${API_URL}/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(userData)
+    });
     
-    // Check if email already exists
-    const emailExists = mockUsers.some(user => user.email === userData.email);
-    if (emailExists) {
-      throw new Error('Email already in use');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Registration failed');
     }
     
-    // Create new user
-    const newUser = {
-      id: String(mockUsers.length + 1),
-      name: userData.name,
-      email: userData.email,
-      password: userData.password,
-      role: 'user', // Default role for new registrations
-      createdAt: new Date().toISOString()
-    };
-    
-    mockUsers.push(newUser);
-    
-    // Return user data without password
-    const { password: _, ...newUserData } = newUser;
-    return newUserData;
+    return response.json();
   },
   
   async getAllUsers() {
-    await simulateNetworkDelay();
+    const user = JSON.parse(localStorage.getItem('user'));
     
-    // Return users without passwords
-    return mockUsers.map(user => {
-      const { password: _, ...userData } = user;
-      return userData;
+    const response = await fetch(`${API_URL}/users`, {
+      headers: {
+        'Authorization': `Bearer ${user.token}`
+      }
     });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to get users');
+    }
+    
+    return response.json();
   },
   
   async updateUser(userId, userData) {
-    await simulateNetworkDelay();
+    const user = JSON.parse(localStorage.getItem('user'));
     
-    const userIndex = mockUsers.findIndex(u => u.id === userId);
-    if (userIndex === -1) {
-      throw new Error('User not found');
+    const response = await fetch(`${API_URL}/users/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${user.token}`
+      },
+      body: JSON.stringify(userData)
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to update user');
     }
     
-    // Check if email is being changed and if it's already in use
-    if (userData.email !== mockUsers[userIndex].email) {
-      const emailExists = mockUsers.some(u => u.email === userData.email && u.id !== userId);
-      if (emailExists) {
-        throw new Error('Email already in use');
-      }
-    }
-    
-    // Update user data
-    mockUsers[userIndex] = {
-      ...mockUsers[userIndex],
-      name: userData.name,
-      email: userData.email,
-      role: userData.role
-    };
-    
-    // Return updated user without password
-    const { password: _, ...updatedUserData } = mockUsers[userIndex];
-    return updatedUserData;
+    return response.json();
   },
   
   async deleteUser(userId) {
-    await simulateNetworkDelay();
+    const user = JSON.parse(localStorage.getItem('user'));
     
-    const userIndex = mockUsers.findIndex(u => u.id === userId);
-    if (userIndex === -1) {
-      throw new Error('User not found');
+    const response = await fetch(`${API_URL}/users/${userId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${user.token}`
+      }
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to delete user');
     }
     
-    // Remove user
-    mockUsers.splice(userIndex, 1);
-    
-    return { success: true };
+    return response.json();
   }
 };
