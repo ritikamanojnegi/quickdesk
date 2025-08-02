@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import RegisterForm from '../components/auth/RegisterForm';
-import { AuthContext } from '../context/AuthContext';
+import RegisterForm from '../Components/auth/RegisterForm';
+import { AuthContext } from '../Context/AuthContext.jsx';
 
 const Register = () => {
   const navigate = useNavigate();

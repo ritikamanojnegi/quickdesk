@@ -1,11 +1,14 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import Navbar from './components/ui/Navbar';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import PrivateRoute from './components/ui/PrivateRoute';
+import { AuthProvider } from './Context/AuthContext.jsx';
+import Navbar from './Components/UI/Navbar';
+import Login from './Pages/Login';
+import Register from './Pages/Register';
+import Dashboard from './Pages/Dashboard';
+import PrivateRoute from './Components/UI/PrivateRoute.jsx';
+import Admin from './Pages/Admin';
+import CreateTicket from './Components/Tickets/CreateTicket';
+import TicketDetail from './Components/Tickets/TicketDetail';
 
 const App = () => {
   return (
@@ -25,7 +28,26 @@ const App = () => {
               </PrivateRoute>
             } />
             
-            {/* Add more routes as needed */}
+            <Route path="/tickets/new" element={
+              <PrivateRoute>
+                <CreateTicket />
+              </PrivateRoute>
+            } />
+            
+            <Route path="/tickets/:id" element={
+              <PrivateRoute>
+                <TicketDetail />
+              </PrivateRoute>
+            } />
+            
+            {/* Admin routes */}
+            <Route path="/admin/*" element={
+              <PrivateRoute adminOnly={true}>
+                <Admin />
+              </PrivateRoute>
+            } />
+            
+            {/* 404 route */}
             <Route path="*" element={<h1>404 Not Found</h1>} />
           </Routes>
         </div>

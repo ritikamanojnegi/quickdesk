@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
-import TicketList from '../components/tickets/TicketList';
-import { AuthContext } from '../context/AuthContext';
+import TicketList from '../Components/Ticketlist';
+import { AuthContext } from '../Context/AuthContext.jsx';
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {

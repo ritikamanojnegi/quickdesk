@@ -39,7 +39,49 @@ const RegisterForm = ({ onSubmit }) => {
 
   return (
     <form onSubmit={handleSubmit} className="register-form">
-      {/* Form fields with error messages */}
+      <div className="form-group">
+        <label>Name</label>
+        <input
+          type="text"
+          name="name"
+          value={userData.name}
+          onChange={handleChange}
+          required
+        />
+      </div>
+      <div className="form-group">
+        <label>Email</label>
+        <input
+          type="email"
+          name="email"
+          value={userData.email}
+          onChange={handleChange}
+          required
+        />
+      </div>
+      <div className="form-group">
+        <label>Password</label>
+        <input
+          type="password"
+          name="password"
+          value={userData.password}
+          onChange={handleChange}
+          required
+        />
+        {errors.password && <div className="error">{errors.password}</div>}
+      </div>
+      <div className="form-group">
+        <label>Confirm Password</label>
+        <input
+          type="password"
+          name="confirmPassword"
+          value={userData.confirmPassword}
+          onChange={handleChange}
+          required
+        />
+        {errors.confirmPassword && <div className="error">{errors.confirmPassword}</div>}
+      </div>
+      <button type="submit">Register</button>
     </form>
   );
 };
